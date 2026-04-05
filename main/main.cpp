@@ -1,28 +1,22 @@
 #include "ClassScansionBLTE.hpp"
-#include "esp_log.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/idf_additions.h"
-#include "freertos/task.h"
-#include "nvs_flash.h"
+#include "library.hpp"
+
+static const char *TAG = "Consumer";
 static void task_scan_ble(void *pvParameters) {
   ScansionBLE *radar = (ScansionBLE *)pvParameters;
   while (true) {
     infoScanning scanRes;
     scanRes = radar->consumeInfo();
     if (scanRes.nbr_of_device > 0) {
-      if (scanRes.ptenza_rsi > -70) {
-        ESP_LOGI("logicCore", "Person detected");
-      }
+      if (scanRes.ptenza_rsi < -70)
+        ESP_LOGI(TAG, "RSSI: %d, lontana", scanRes.ptenza_rsi);
+      else if (scanRes.ptenza_rsi < -50)
+        ESP_LOGI(TAG, "RSSI: %d, vicina", scanRes.ptenza_rsi);
+      else
+        ESP_LOGI(TAG, "RSSI: %d, molto vicina", scanRes.ptenza_rsi);
     }
-    vTaskDelay(pdMS_TO_TICKS(1000));
+    vTaskDelay(pdMS_TO_TICKS(100));
   }
-}
-
-// Forward declaration
-extern "C" {
-#include "esp_bt.h"
-#include "esp_bt_main.h"
-#include "esp_gap_ble_api.h"
 }
 
 extern "C" void app_main(void) {
@@ -37,11 +31,12 @@ extern "C" void app_main(void) {
 
   ESP_LOGI("main", "Calling logicCore()...");
 
-  // Chiamiamo la tua logica (una sola volta, dato che fa init e return 0)
-
-  // Loop infinito per impedire che il task main termini
   ScansionBLE radar;
   radar.init();
   xTaskCreatePinnedToCore(task_scan_ble, "task_scan_ble", 4096, &radar, 1, NULL,
                           1);
+
+  while (true) {
+    vTaskDelay(pdMS_TO_TICKS(1000));
+  }
 }
