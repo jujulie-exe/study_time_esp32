@@ -1,0 +1,23 @@
+idf_component_register(
+    SRCS
+        "ClassScansionBLTE.cpp"
+        "main.cpp"
+    INCLUDE_DIRS
+        "../include"
+        "."
+    REQUIRES
+        nvs_flash
+        bt
+        driver
+        esp_hw_support
+        esp_timer
+        freertos
+        esp_lcd
+)
+target_compile_options(${COMPONENT_LIB} PRIVATE
+    -Wall        
+    -Wextra      
+    -Werror      
+    -Wshadow     
+    -Wcast-align 
+)

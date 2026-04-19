@@ -14,4 +14,12 @@
 #include <cstdint>
 #include <string>
 #include <vector>
+
+#include "driver/spi_master.h"
+#include "driver/gpio.h"
+#include "esp_lcd_panel_io.h"
+#include "esp_lcd_panel_vendor.h"
+#include "esp_lcd_panel_ops.h"
+#include "esp_heap_caps.h"
+
 #endif // LIBRARY_HPP
