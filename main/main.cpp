@@ -95,29 +95,28 @@ static void task_scan_ble(void *pvParameters) {
   while (true) {
     infoScanning scanRes;
     scanRes = radar->consumeInfo();
-    
+
     uint32_t now = millis();
     uint32_t elapsed = now - scanRes.last_seen_ms;
 
     // Se abbiamo visto un telefono negli ultimi 5 secondi
     if (scanRes.nbr_of_device > 0 && elapsed < 5000) {
-      if (scanRes.ptenza_rsi < -70) {
+      robotEyes->setDisplayColors(0x0000, 0xFFFF); // White
+      if (scanRes.ptenza_rsi < -80) {
         ESP_LOGI(TAG, "RSSI: %d, lontana", scanRes.ptenza_rsi);
         robotEyes->setMood(DEFAULT);
-        robotEyes->setDisplayColors(0x0000, 0x001F); // Blue
-      } else if (scanRes.ptenza_rsi < -50) {
+      } else if (scanRes.ptenza_rsi < -70) {
         ESP_LOGI(TAG, "RSSI: %d, vicina", scanRes.ptenza_rsi);
-        robotEyes->setMood(HAPPY);
-        robotEyes->setDisplayColors(0x0000, 0x07E0); // Green
+        robotEyes->setMood(TIRED);
       } else {
         ESP_LOGI(TAG, "RSSI: %d, molto vicina", scanRes.ptenza_rsi);
         robotEyes->setMood(ANGRY);
-        robotEyes->setDisplayColors(0x0000, 0xF800); // Red
+        robotEyes->setDisplayColors(0x0000, 0x001F); // Rosso
         robotEyes->anim_confused();
       }
     } else {
       // Nessun telefono rilevato di recente
-      robotEyes->setMood(DEFAULT);
+      robotEyes->setMood(HAPPY);
       robotEyes->setDisplayColors(0x0000, 0xFFFF); // White
     }
 
@@ -142,13 +141,13 @@ extern "C" void app_main(void) {
   gfx = new EspLcdGFX(panel_handle, LCD_H_RES, LCD_V_RES);
   robotEyes = new RoboEyes<EspLcdGFX>(*gfx);
   robotEyes->begin(LCD_H_RES, LCD_V_RES, 30); // 30 fps
-  
+
   // Make eyes bigger (Screen is 320x172)
   robotEyes->setWidth(110, 110);
   robotEyes->setHeight(110, 110);
   robotEyes->setBorderradius(20, 20);
   robotEyes->setSpacebetween(35);
-  
+
   robotEyes->setIdleMode(true, 2, 2);
   robotEyes->setAutoblinker(true, 3, 2);
 
