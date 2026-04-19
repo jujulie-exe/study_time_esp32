@@ -27,6 +27,7 @@
 
 #include <stdint.h>
 #include <stdlib.h>
+#include <atomic>
 #include "esp_timer.h"
 #include "esp_random.h"
 
@@ -37,10 +38,6 @@ inline unsigned long millis() {
 #define random(x) (esp_random() % (x))
 
 typedef uint8_t byte;
-
-// Display colors (RGB565 format)
-uint16_t BGCOLOR = 0x0000;   // Black background
-uint16_t MAINCOLOR = 0x001F; // Blue drawings
 
 // For mood type switch
 #define DEFAULT 0
@@ -70,6 +67,9 @@ private:
   // mess things up :)
 
 public:
+  std::atomic<uint16_t> BGCOLOR{0x0000};   // background and overlays
+  std::atomic<uint16_t> MAINCOLOR{0xFFFF}; // drawings (White default)
+
   // Reference to Display object
   EspDisplay *display;
 
@@ -236,7 +236,10 @@ public:
   //  GENERAL METHODS
   //*********************************************************************************************
 
-  RoboEyes(EspDisplay &disp) : display(&disp) {};
+  RoboEyes(EspDisplay &disp) : display(&disp) {
+      BGCOLOR.store(0x0000);
+      MAINCOLOR.store(0xFFFF);
+  };
 
   // Startup RoboEyes with defined screen-width, screen-height and max. frames
   // per second
@@ -268,12 +271,8 @@ public:
 
   // Set color values (RGB565)
   void setDisplayColors(uint16_t background, uint16_t main) {
-    BGCOLOR =
-        background; // background and overlays, choose 0 for monochrome displays
-                    // and 0x00 for grayscale displays such as SSD1322
-    MAINCOLOR =
-        main; // drawings, choose 1 for monochrome displays and 0x0F for
-              // grayscale displays such as SSD1322 (0x0F = maximum brightness)
+    BGCOLOR.store(background);
+    MAINCOLOR.store(main);
   }
 
   void setWidth(byte leftEye, byte rightEye) {
@@ -680,10 +679,10 @@ public:
 
     // Draw basic eye rectangles
     display->fillRoundRect(eyeLx, eyeLy, eyeLwidthCurrent, eyeLheightCurrent,
-                           eyeLborderRadiusCurrent, MAINCOLOR); // left eye
+                           eyeLborderRadiusCurrent, MAINCOLOR.load()); // left eye
     if (!cyclops) {
       display->fillRoundRect(eyeRx, eyeRy, eyeRwidthCurrent, eyeRheightCurrent,
-                             eyeRborderRadiusCurrent, MAINCOLOR); // right eye
+                             eyeRborderRadiusCurrent, MAINCOLOR.load()); // right eye
     }
 
     // Prepare mood type transitions
@@ -710,20 +709,20 @@ public:
     if (!cyclops) {
       display->fillTriangle(eyeLx, eyeLy - 1, eyeLx + eyeLwidthCurrent,
                             eyeLy - 1, eyeLx, eyeLy + eyelidsTiredHeight - 1,
-                            BGCOLOR); // left eye
+                            BGCOLOR.load()); // left eye
       display->fillTriangle(eyeRx, eyeRy - 1, eyeRx + eyeRwidthCurrent,
                             eyeRy - 1, eyeRx + eyeRwidthCurrent,
                             eyeRy + eyelidsTiredHeight - 1,
-                            BGCOLOR); // right eye
+                            BGCOLOR.load()); // right eye
     } else {
       // Cyclops tired eyelids
       display->fillTriangle(eyeLx, eyeLy - 1, eyeLx + (eyeLwidthCurrent / 2),
                             eyeLy - 1, eyeLx, eyeLy + eyelidsTiredHeight - 1,
-                            BGCOLOR); // left eyelid half
+                            BGCOLOR.load()); // left eyelid half
       display->fillTriangle(
           eyeLx + (eyeLwidthCurrent / 2), eyeLy - 1, eyeLx + eyeLwidthCurrent,
           eyeLy - 1, eyeLx + eyeLwidthCurrent, eyeLy + eyelidsTiredHeight - 1,
-          BGCOLOR); // right eyelid half
+          BGCOLOR.load()); // right eyelid half
     }
 
     // Draw angry top eyelids
@@ -732,20 +731,20 @@ public:
       display->fillTriangle(eyeLx, eyeLy - 1, eyeLx + eyeLwidthCurrent,
                             eyeLy - 1, eyeLx + eyeLwidthCurrent,
                             eyeLy + eyelidsAngryHeight - 1,
-                            BGCOLOR); // left eye
+                            BGCOLOR.load()); // left eye
       display->fillTriangle(eyeRx, eyeRy - 1, eyeRx + eyeRwidthCurrent,
                             eyeRy - 1, eyeRx, eyeRy + eyelidsAngryHeight - 1,
-                            BGCOLOR); // right eye
+                            BGCOLOR.load()); // right eye
     } else {
       // Cyclops angry eyelids
       display->fillTriangle(eyeLx, eyeLy - 1, eyeLx + (eyeLwidthCurrent / 2),
                             eyeLy - 1, eyeLx + (eyeLwidthCurrent / 2),
                             eyeLy + eyelidsAngryHeight - 1,
-                            BGCOLOR); // left eyelid half
+                            BGCOLOR.load()); // left eyelid half
       display->fillTriangle(
           eyeLx + (eyeLwidthCurrent / 2), eyeLy - 1, eyeLx + eyeLwidthCurrent,
           eyeLy - 1, eyeLx + (eyeLwidthCurrent / 2),
-          eyeLy + eyelidsAngryHeight - 1, BGCOLOR); // right eyelid half
+          eyeLy + eyelidsAngryHeight - 1, BGCOLOR.load()); // right eyelid half
     }
 
     // Draw happy bottom eyelids
@@ -754,12 +753,12 @@ public:
     display->fillRoundRect(
         eyeLx - 1, (eyeLy + eyeLheightCurrent) - eyelidsHappyBottomOffset + 1,
         eyeLwidthCurrent + 2, eyeLheightDefault, eyeLborderRadiusCurrent,
-        BGCOLOR); // left eye
+        BGCOLOR.load()); // left eye
     if (!cyclops) {
       display->fillRoundRect(
           eyeRx - 1, (eyeRy + eyeRheightCurrent) - eyelidsHappyBottomOffset + 1,
           eyeRwidthCurrent + 2, eyeRheightDefault, eyeRborderRadiusCurrent,
-          BGCOLOR); // right eye
+          BGCOLOR.load()); // right eye
     }
 
     // Add sweat drops
@@ -787,7 +786,7 @@ public:
                    (sweat1Width /
                     2); // keep the growing shape centered to initial x position
       display->fillRoundRect(sweat1XPos, sweat1YPos, sweat1Width, sweat1Height,
-                             sweatBorderradius, MAINCOLOR); // draw sweat drop
+                             sweatBorderradius, MAINCOLOR.load()); // draw sweat drop
 
       // Sweat drop 2 -> center area
       if (sweat2YPos <= sweat2YPosMax) {
@@ -812,7 +811,7 @@ public:
                    (sweat2Width /
                     2); // keep the growing shape centered to initial x position
       display->fillRoundRect(sweat2XPos, sweat2YPos, sweat2Width, sweat2Height,
-                             sweatBorderradius, MAINCOLOR); // draw sweat drop
+                             sweatBorderradius, MAINCOLOR.load()); // draw sweat drop
 
       // Sweat drop 3 -> right corner
       if (sweat3YPos <= sweat3YPosMax) {
@@ -837,7 +836,7 @@ public:
                    (sweat3Width /
                     2); // keep the growing shape centered to initial x position
       display->fillRoundRect(sweat3XPos, sweat3YPos, sweat3Width, sweat3Height,
-                             sweatBorderradius, MAINCOLOR); // draw sweat drop
+                             sweatBorderradius, MAINCOLOR.load()); // draw sweat drop
     }
 
     display->display(); // show drawings on display

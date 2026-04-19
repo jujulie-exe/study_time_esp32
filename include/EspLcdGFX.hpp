@@ -13,7 +13,11 @@ private:
     esp_lcd_panel_handle_t panel_handle;
     int16_t width, height;
     uint16_t *framebuffer;
-    bool has_psram;
+
+    // Helper to swap bytes for ST7789 (Expects Big-Endian)
+    inline uint16_t swapColor(uint16_t color) {
+        return (color << 8) | (color >> 8);
+    }
 
     // Helper functions for drawing
     inline void drawFastVLine(int16_t x, int16_t y, int16_t h, uint16_t color) {
@@ -71,7 +75,7 @@ public:
 
     void drawPixel(int16_t x, int16_t y, uint16_t color) {
         if (x < 0 || x >= width || y < 0 || y >= height) return;
-        framebuffer[y * width + x] = color;
+        framebuffer[y * width + x] = swapColor(color);
     }
 
     void fillRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color) {
@@ -81,9 +85,11 @@ public:
         if (x + w > width) w = width - x;
         if (y + h > height) h = height - y;
 
+        uint16_t swapped = swapColor(color);
         for (int16_t row = 0; row < h; row++) {
+            uint16_t *line = &framebuffer[(y + row) * width + x];
             for (int16_t col = 0; col < w; col++) {
-                framebuffer[(y + row) * width + (x + col)] = color;
+                line[col] = swapped;
             }
         }
     }

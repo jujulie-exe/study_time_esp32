@@ -1,5 +1,6 @@
 #include "ClassScansionBLTE.hpp"
 #include "esp_gap_ble_api.h"
+#include "esp_timer.h"
 static const ManufacturerEntry PHONE_MANUFACTURERS[] = {
     {CompanyID::APPLE, "Apple"},     {CompanyID::GOOGLE, "Google"},
     {CompanyID::Samsung, "Samsung"}, {CompanyID::Xiaomi, "Xiaomi"},
@@ -134,12 +135,13 @@ bool ScansionBLE::isPhone(esp_ble_gap_cb_param_t *param) const {
 
 void ScansionBLE::writeResEvent(esp_ble_gap_cb_param_t *param) {
   if (isPhone(param)) {
-    infoScanning temp = _sharedData.load(std::memory_order_acquire);
+    infoScanning temp;
     temp.ptenza_rsi = param->ext_adv_report.params.rssi;
-    temp.nbr_of_device++;
+    temp.nbr_of_device = 1; 
+    temp.last_seen_ms = (uint32_t)(esp_timer_get_time() / 1000ULL);
     _sharedData.store(temp, std::memory_order_release);
   } else {
-    ESP_LOGI(TAG, "nessun telefono");
+    ESP_LOGD(TAG, "nessun telefono");
   }
 }
 
@@ -170,7 +172,5 @@ void ScansionBLE::callback(esp_gap_ble_cb_event_t event,
   }
 }
 infoScanning ScansionBLE::consumeInfo() {
-  infoScanning result = _sharedData.load(std::memory_order_acquire);
-  _sharedData.store(infoScanning{0, -100}, std::memory_order_release);
-  return result;
+  return _sharedData.load(std::memory_order_acquire);
 }

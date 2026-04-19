@@ -5,6 +5,7 @@
 struct infoScanning {
   uint8_t nbr_of_device;
   int8_t ptenza_rsi;
+  uint32_t last_seen_ms;
 };
 enum class CompanyID : uint16_t {
   APPLE = 0x004C,
@@ -39,7 +40,7 @@ public:
   ~ScansionBLE();
 
 private:
-  std::atomic<infoScanning> _sharedData{infoScanning{0, -100}};
+  std::atomic<infoScanning> _sharedData{infoScanning{0, -100, 0}};
   static ScansionBLE *_instance;
   esp_ble_scan_params_t _scan_params;
 };
